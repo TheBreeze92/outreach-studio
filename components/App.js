@@ -12,6 +12,11 @@ const white = "#ffffff";
 
 const shadow = (n = 5, c = ink) => `${n}px ${n}px 0 ${c}`;
 
+function domainFromUrl(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); }
+  catch { return url; }
+}
+
 function fileToBase64(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -62,9 +67,8 @@ export default function App() {
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState("");
 
-  const [senderName,  setSenderName]  = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [companyUrl,  setCompanyUrl]  = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [companyUrl, setCompanyUrl] = useState("");
   const [productDescription, setProductDescription] = useState("");
 
   const [file,     setFile]     = useState(null);
@@ -128,7 +132,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pdfBase64: b64,
-          senderName, companyName, companyUrl, productDescription
+          senderName, companyUrl, productDescription
         })
       });
 
@@ -139,9 +143,9 @@ export default function App() {
       }
       data = await resp.json();
       if (data.error) throw new Error(data.error);
-      // Force correct anchor text — AI sometimes extracts URL path segments
-      if (data.link_line && companyName && companyUrl) {
-        data.link_line = data.link_line.replace(/\[([^\]]+)\]\(([^)]+)\)/, `[${companyName}](${companyUrl})`);
+      if (data.link_line && companyUrl) {
+        const linkText = domainFromUrl(companyUrl);
+        data.link_line = data.link_line.replace(/\[[^\]]+\]\([^)]+\)/g, `[${linkText}](${companyUrl})`);
       }
       setResult(data);
     } catch (e) {
@@ -258,15 +262,9 @@ export default function App() {
                   <p style={{ ...lbl, marginBottom: 16, fontSize: 9, letterSpacing: "0.18em", borderBottom: `1px solid #e7e2d8`, paddingBottom: 10 }}>
                     Your details — sender metadata
                   </p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-                    <div>
-                      <label style={lbl}>Your name</label>
-                      <input style={{...inp, background: cream}} placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={lbl}>Company name</label>
-                      <input style={{...inp, background: cream}} placeholder="e.g. Acme Corp" value={companyName} onChange={e => setCompanyName(e.target.value)} />
-                    </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={lbl}>Your name</label>
+                    <input style={{...inp, background: cream}} placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} />
                   </div>
                   <div style={{ marginBottom: 14 }}>
                     <label style={lbl}>Company URL</label>

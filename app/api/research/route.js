@@ -6,11 +6,12 @@ export async function POST(req) {
   }
 
   try {
-    const { pdfBase64, senderName, companyName, companyUrl, productDescription } = await req.json();
+    const { pdfBase64, senderName, companyUrl, productDescription } = await req.json();
 
-    const sender  = senderName  || "Alex Johnson";
-    const company = companyName || "Acme Corp";
-    const url     = companyUrl  || "https://acmecorp.com";
+    const sender = senderName || "Alex Johnson";
+    const url    = companyUrl || "https://yourcompany.com";
+    let company;
+    try { company = new URL(url).hostname.replace(/^www\./, ""); } catch { company = "your company"; }
     const product = productDescription || "We help businesses grow through tailored outreach strategies";
 
     const prompt = `You are an elite B2B sales researcher and cold-email copywriter.

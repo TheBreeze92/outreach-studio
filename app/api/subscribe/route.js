@@ -21,7 +21,12 @@ export async function POST(req) {
       .from('signups')
       .insert([{ email, created_at: new Date().toISOString() }]);
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "23505") {
+        return Response.json({ success: true });
+      }
+      throw error;
+    }
 
     return Response.json({ success: true });
   } catch (err) {
