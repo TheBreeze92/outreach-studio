@@ -139,6 +139,10 @@ export default function App() {
       }
       data = await resp.json();
       if (data.error) throw new Error(data.error);
+      // Force correct anchor text — AI sometimes extracts URL path segments
+      if (data.link_line && companyName && companyUrl) {
+        data.link_line = data.link_line.replace(/\[([^\]]+)\]\(([^)]+)\)/, `[${companyName}](${companyUrl})`);
+      }
       setResult(data);
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
@@ -158,7 +162,7 @@ export default function App() {
       .map(([k]) => result[k] || "")
       .join("\n\n")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)");
-    const full = `Subject: ${result.subject}\n\n${result.greeting}\n\n${body}\n\nBest,\n${senderName || "Paige Lewin"}`;
+    const full = `Subject: ${result.subject}\n\n${result.greeting}\n\n${body}\n\nBest,\n${senderName || "Alex Johnson"}`;
     navigator.clipboard.writeText(full).catch(() => {
       if (hiddenTA.current) {
         hiddenTA.current.value = full;
@@ -421,7 +425,7 @@ export default function App() {
                     <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: ink }}><RichText text={result[key]} /></p>
                   </div>
                 ))}
-                <p style={{ margin: 0, fontSize: 14 }}>Best,<br /><strong>{senderName || "Paige Lewin"}</strong></p>
+                <p style={{ margin: 0, fontSize: 14 }}>Best,<br /><strong>{senderName || "Alex Johnson"}</strong></p>
               </div>
             </div>
 

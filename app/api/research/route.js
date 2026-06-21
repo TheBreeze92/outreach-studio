@@ -56,7 +56,7 @@ Using the real researched signal and the sender context above, write a cold emai
 1. The Hook — an open-ended question about the prospect's strategy or goals (not a yes/no question; provokes thought)
 2. The Signal — the "Why Now": reference the specific real-world news or data you found, precisely and credibly
 3. The Succinct Intro — one sentence: "I'm ${sender}, [one compelling credibility line drawn from the product description]."
-4. The Hyperlink — one short sentence embedding ${company} as a markdown hyperlink: e.g. "We run [${company}](${url})."
+4. The Hyperlink — one short sentence with the company name as a markdown hyperlink. The anchor text MUST be exactly "${company}" — not the URL, not a path segment, not a variation. e.g. "We run [${company}](${url})."
 5. The Teaser — a specific, meaty collaboration idea tied directly to the signal; concrete, not vague
 6. The Frictionless CTA — propose a 15-min call with a specific suggested time: Thursday afternoon or Friday morning
 
