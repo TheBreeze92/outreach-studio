@@ -52,7 +52,12 @@ const STEPS = [
 ];
 
 export default function App() {
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cos_subscribed") === "1";
+    }
+    return false;
+  });
   const [subscriberEmail, setSubscriberEmail] = useState("");
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState("");
@@ -60,7 +65,7 @@ export default function App() {
   const [senderName,  setSenderName]  = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyUrl,  setCompanyUrl]  = useState("");
-  const [credLine,    setCredLine]    = useState("");
+  const [productDescription, setProductDescription] = useState("");
 
   const [file,     setFile]     = useState(null);
   const [loading,  setLoading]  = useState(false);
@@ -97,6 +102,7 @@ export default function App() {
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
 
+      localStorage.setItem("cos_subscribed", "1");
       setIsSubscribed(true);
     } catch (err) {
       setSubError(err.message || "Failed to process request.");
@@ -122,7 +128,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pdfBase64: b64,
-          senderName, companyName, companyUrl, credLine
+          senderName, companyName, companyUrl, productDescription
         })
       });
 
@@ -251,20 +257,20 @@ export default function App() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                     <div>
                       <label style={lbl}>Your name</label>
-                      <input style={{...inp, background: cream}} placeholder="Paige Lewin" value={senderName} onChange={e => setSenderName(e.target.value)} />
+                      <input style={{...inp, background: cream}} placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} />
                     </div>
                     <div>
                       <label style={lbl}>Company name</label>
-                      <input style={{...inp, background: cream}} placeholder="Texture Talks" value={companyName} onChange={e => setCompanyName(e.target.value)} />
+                      <input style={{...inp, background: cream}} placeholder="e.g. Acme Corp" value={companyName} onChange={e => setCompanyName(e.target.value)} />
                     </div>
                   </div>
                   <div style={{ marginBottom: 14 }}>
                     <label style={lbl}>Company URL</label>
-                    <input style={{...inp, background: cream}} placeholder="https://www.texturetalks.co.uk" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} />
+                    <input style={{...inp, background: cream}} placeholder="e.g. https://acmecorp.com" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} />
                   </div>
                   <div>
-                    <label style={lbl}>Credibility line — use <code style={{ background: cream, padding: "1px 5px", fontFamily: "monospace", fontSize: 11 }}>{"{company}"}</code></label>
-                    <input style={{...inp, background: cream}} placeholder="founder of {company} — we help brands scale content" value={credLine} onChange={e => setCredLine(e.target.value)} />
+                    <label style={lbl}>What does your product do?</label>
+                    <input style={{...inp, background: cream}} placeholder="e.g. We help B2B sales teams book more meetings by turning prospect research into personalised emails in seconds" value={productDescription} onChange={e => setProductDescription(e.target.value)} />
                   </div>
                 </div>
 

@@ -6,13 +6,12 @@ export async function POST(req) {
   }
 
   try {
-    const { pdfBase64, senderName, companyName, companyUrl, credLine } = await req.json();
+    const { pdfBase64, senderName, companyName, companyUrl, productDescription } = await req.json();
 
-    const sender  = senderName  || "Paige Lewin";
-    const company = companyName || "Texture Talks";
-    const url     = companyUrl  || "https://www.texturetalks.co.uk";
-    const cred    = (credLine   || "founder of {company} — we help brands turn momentum into content that actually compounds")
-                      .replace(/\{company\}/g, company);
+    const sender  = senderName  || "Alex Johnson";
+    const company = companyName || "Acme Corp";
+    const url     = companyUrl  || "https://acmecorp.com";
+    const product = productDescription || "We help businesses grow through tailored outreach strategies";
 
     const prompt = `You are an elite B2B sales researcher and cold-email copywriter.
 
@@ -47,14 +46,19 @@ Run a maximum of 2 focused searches before concluding. Suggested search queries 
 
 If you cannot find anything from May or June 2026, set signal_headline to "No signal found in the last 2 months" and explain what you searched for in signal_detail. Still write the best possible email using general knowledge of the company.
 
+SENDER CONTEXT:
+- Name: ${sender}
+- Company: ${company} (${url})
+- Product: ${product}
+
 STEP 3 — WRITE THE EMAIL
-Using the real researched signal, write a cold email from ${sender} (${cred}) following this exact 6-part framework:
-1. The Hook — an open-ended strategic question
-2. The Signal — the specific researched why-now event, referenced precisely
-3. The Intro — "I'm ${sender}, ${cred}."
-4. The Link — "We run [${company}](${url})."
-5. The Teaser — a specific collaboration idea tied directly to the signal
-6. The Ask — propose a 15-min call, suggest Thursday afternoon slots (e.g. 2pm or 3:30pm)
+Using the real researched signal and the sender context above, write a cold email following this exact 6-part framework:
+1. The Hook — an open-ended question about the prospect's strategy or goals (not a yes/no question; provokes thought)
+2. The Signal — the "Why Now": reference the specific real-world news or data you found, precisely and credibly
+3. The Succinct Intro — one sentence: "I'm ${sender}, [one compelling credibility line drawn from the product description]."
+4. The Hyperlink — one short sentence embedding ${company} as a markdown hyperlink: e.g. "We run [${company}](${url})."
+5. The Teaser — a specific, meaty collaboration idea tied directly to the signal; concrete, not vague
+6. The Frictionless CTA — propose a 15-min call with a specific suggested time: Thursday afternoon or Friday morning
 
 STEP 4 — RETURN JSON ONLY
 Return ONLY this JSON object, no markdown fences, no commentary:
@@ -72,10 +76,10 @@ Return ONLY this JSON object, no markdown fences, no commentary:
   "greeting": "Hi [first name],",
   "hook": "part 1 text",
   "signal_line": "part 2 text — reference the signal specifically",
-  "intro": "part 3 — I'm ${sender}, ${cred}.",
-  "link_line": "part 4 — We run [${company}](${url}).",
-  "teaser": "part 5 text — specific idea tied to the signal",
-  "cta": "part 6 text — 15 min call, Thursday afternoon slots"
+  "intro": "part 3 — I'm ${sender}, [credibility line from product description].",
+  "link_line": "part 4 — short sentence with [${company}](${url}) as the hyperlink",
+  "teaser": "part 5 — specific meaty collaboration idea tied to the signal",
+  "cta": "part 6 — 15-min call with suggested time: Thursday afternoon or Friday morning"
 }
 
 Rules:
