@@ -144,8 +144,17 @@ export default function App() {
       data = await resp.json();
       if (data.error) throw new Error(data.error);
       if (data.link_line && companyUrl) {
-        const linkText = domainFromUrl(companyUrl);
-        data.link_line = data.link_line.replace(/\[[^\]]+\]\([^)]+\)/g, `[${linkText}](${companyUrl})`);
+        const normUrl  = /^https?:\/\//i.test(companyUrl) ? companyUrl : `https://${companyUrl}`;
+        const linkText = domainFromUrl(normUrl);
+        const mdLink   = `[${linkText}](${normUrl})`;
+        if (/\[[^\]]+\]\([^)]+\)/.test(data.link_line)) {
+          data.link_line = data.link_line.replace(/\[[^\]]+\]\([^)]+\)/g, mdLink);
+        } else {
+          const withLink = data.link_line.replace(linkText, mdLink);
+          data.link_line = withLink !== data.link_line
+            ? withLink
+            : data.link_line.trimEnd().replace(/\.$/, "") + ` ${mdLink}.`;
+        }
       }
       setResult(data);
     } catch (e) {
