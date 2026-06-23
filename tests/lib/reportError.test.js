@@ -24,8 +24,9 @@ describe("reportError", () => {
     expect(url).toBe("https://hooks.slack.com/test-url");
     expect(options.method).toBe("POST");
     const body = JSON.parse(options.body);
-    expect(body.blocks[0].text.text).toBe("🔴 Error in /research");
-    expect(body.blocks[1].text.text).toContain("something broke");
+    expect(body.blocks[0].text.text).toBe("🔴 Cold Outreach Studio — Something broke");
+    expect(body.blocks[1].text.text).toContain("Email generation feature");
+    expect(body.blocks[3].text.text).toContain("something broke");
   });
 
   it("does nothing when SLACK_ERROR_WEBHOOK_URL is not set", async () => {

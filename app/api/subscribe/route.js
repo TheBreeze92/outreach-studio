@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { reportError } from "../../../lib/reportError.js";
 
 export async function POST(req) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,6 +31,7 @@ export async function POST(req) {
 
     return Response.json({ success: true });
   } catch (err) {
+    await reportError("subscribe", err);
     return Response.json({ error: err.message || "Failed to subscribe." }, { status: 500 });
   }
 }

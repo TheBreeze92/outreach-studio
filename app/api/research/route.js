@@ -1,3 +1,5 @@
+import { reportError } from "../../lib/reportError.js";
+
 export const maxDuration = 60;
 
 export async function POST(req) {
@@ -139,6 +141,7 @@ Rules:
     return Response.json(parsed);
 
   } catch (e) {
+    await reportError("research", e);
     const msg = e.name === "AbortError"
       ? "Research timed out — please try again."
       : e.message || "Server error";
