@@ -1,4 +1,4 @@
-import { reportError } from "../../lib/reportError.js";
+import { reportError } from "../../../lib/reportError.js";
 
 export const maxDuration = 60;
 
