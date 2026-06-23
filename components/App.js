@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
-import { Upload, Copy, Check, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock } from "lucide-react";
+import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock, Send } from "lucide-react";
+import { buildMailtoUrl } from "../lib/buildMailtoUrl.js";
 
 const cream = "#fcfbf7";
 const ink   = "#1a1714";
@@ -71,16 +72,15 @@ export default function App() {
   const [companyUrl, setCompanyUrl] = useState("");
   const [productDescription, setProductDescription] = useState("");
 
-  const [file,     setFile]     = useState(null);
-  const [loading,  setLoading]  = useState(false);
-  const [stepIdx,  setStepIdx]  = useState(0);
-  const [error,    setError]    = useState("");
-  const [result,   setResult]   = useState(null);
-  const [copied,   setCopied]   = useState(false);
-  const [dragging, setDragging] = useState(false);
+  const [file,          setFile]          = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [stepIdx,       setStepIdx]       = useState(0);
+  const [error,         setError]         = useState("");
+  const [result,        setResult]        = useState(null);
+  const [dragging,      setDragging]      = useState(false);
+  const [prospectEmail, setProspectEmail] = useState("");
 
   const fileInput = useRef();
-  const hiddenTA  = useRef();
   const stepTimer = useRef();
 
   function pickFile(f) {
@@ -166,25 +166,7 @@ export default function App() {
   }
 
   function reset() {
-    setFile(null); setResult(null); setError(""); setCopied(false); setStepIdx(0);
-  }
-
-  function copyEmail() {
-    if (!result) return;
-    const body = EMAIL_PARTS
-      .map(([k]) => result[k] || "")
-      .join("\n\n")
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)");
-    const full = `Subject: ${result.subject}\n\n${result.greeting}\n\n${body}\n\nBest,\n${senderName || "Alex Johnson"}`;
-    navigator.clipboard.writeText(full).catch(() => {
-      if (hiddenTA.current) {
-        hiddenTA.current.value = full;
-        hiddenTA.current.select();
-        document.execCommand("copy");
-      }
-    });
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setFile(null); setResult(null); setError(""); setStepIdx(0); setProspectEmail("");
   }
 
   const inp = {
@@ -237,19 +219,20 @@ export default function App() {
             <p style={{ fontSize: 13.5, color: mute, maxWidth: 380, margin: "0 auto 28px", lineHeight: 1.5, textAlign: "center" }}>
               Join our network of B2B professionals. Drop your email below to instantly activate the 6-part AI outreach generator.
             </p>
-            
+
             <form onSubmit={handleSubscribe} style={{ maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
-              <input 
-                type="email" 
-                style={inp} 
-                placeholder="name@company.com" 
+              <input
+                type="email"
+                style={inp}
+                placeholder="name@company.com"
                 value={subscriberEmail}
                 onChange={e => setSubscriberEmail(e.target.value)}
                 disabled={subLoading}
-                required 
+                required
               />
-                {subError && <p style={{ fontSize: 12, color: "#c00", margin: 0, textAlign: "left" }}>⚠ {subError}</p>}              <button 
-                type="submit" 
+              {subError && <p style={{ fontSize: 12, color: "#c00", margin: 0, textAlign: "left" }}>⚠ {subError}</p>}
+              <button
+                type="submit"
                 disabled={subLoading}
                 style={{
                   background: choc, color: cream, border: `2px solid ${ink}`,
@@ -409,15 +392,9 @@ export default function App() {
 
             {/* EMAIL CARD */}
             <div className="rise" style={{ background: white, border: `2px solid ${ink}`, boxShadow: shadow(6), animationDelay: ".1s" }}>
-              <div style={{ padding: "16px 20px", borderBottom: `2px solid ${ink}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: mute, display: "block" }}>Output · six-part framework</span>
-                  <span style={{ fontFamily: "'Fraunces',serif", fontSize: "1.15rem", fontWeight: 600 }}>Your cold email</span>
-                </div>
-                <button type="button" onClick={copyEmail}
-                  style={{ background: copied ? choc : amber, color: copied ? cream : ink, border: `2px solid ${ink}`, boxShadow: shadow(2), padding: "9px 16px", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background .2s, color .2s" }}>
-                  {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy email</>}
-                </button>
+              <div style={{ padding: "16px 20px", borderBottom: `2px solid ${ink}` }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: mute, display: "block" }}>Output · six-part framework</span>
+                <span style={{ fontFamily: "'Fraunces',serif", fontSize: "1.15rem", fontWeight: 600 }}>Your cold email</span>
               </div>
 
               <div style={{ padding: "20px 20px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -436,14 +413,47 @@ export default function App() {
               </div>
             </div>
 
+            {/* SEND PANEL */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label style={lbl}>Prospect's email (optional)</label>
+                <input
+                  type="email"
+                  style={{ ...inp, background: cream }}
+                  placeholder="prospect@company.com"
+                  value={prospectEmail}
+                  onChange={e => setProspectEmail(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = buildMailtoUrl({
+                    prospectEmail,
+                    subject: result.subject,
+                    parts: EMAIL_PARTS.map(([k]) => result[k] || ""),
+                    greeting: result.greeting,
+                    senderName: senderName || "Alex Johnson",
+                  });
+                  window.location.href = url;
+                }}
+                style={{
+                  background: choc, color: cream, border: `2px solid ${ink}`,
+                  boxShadow: shadow(4, amber), padding: "16px 24px",
+                  fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                }}
+              >
+                <Send size={16} /> Send email
+              </button>
+            </div>
+
             <button type="button" onClick={reset}
               style={{ background: "transparent", border: `2px dashed #c8c2b6`, color: mute, padding: "13px", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <RotateCcw size={13} /> Research a new prospect
             </button>
           </div>
         )}
-
-        <textarea ref={hiddenTA} readOnly aria-hidden="true" style={{ position: "fixed", left: -9999, opacity: 0, height: 0, width: 0 }} />
 
         <footer style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#ccc5ba", textAlign: "center", borderTop: `1px solid #e7e2d8`, paddingTop: 16 }}>
           Cold Outreach Studio · no data stored
