@@ -29,6 +29,25 @@ export async function POST(req) {
       throw error;
     }
 
+    if (process.env.SLACK_SIGNUP_WEBHOOK_URL) {
+      fetch(process.env.SLACK_SIGNUP_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blocks: [
+            {
+              type: "header",
+              text: { type: "plain_text", text: "🟢 New signup on Cold Outreach Studio" },
+            },
+            {
+              type: "section",
+              text: { type: "mrkdwn", text: `*Email:* ${email}\n*Time:* ${new Date().toUTCString()}` },
+            },
+          ],
+        }),
+      }).catch(() => {});
+    }
+
     return Response.json({ success: true });
   } catch (err) {
     await reportError("subscribe", err);
