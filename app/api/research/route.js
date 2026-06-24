@@ -133,12 +133,16 @@ Rules:
 
     if (!anthropicResp.ok) {
       const err = await anthropicResp.text();
+      await reportError("research", new Error(`Anthropic API error: ${err.slice(0, 200)}`));
       return Response.json({ error: `Anthropic API error: ${err.slice(0, 200)}` }, { status: 500 });
     }
 
     const data = await anthropicResp.json();
     const textBlock = [...(data.content || [])].reverse().find(b => b.type === "text");
-    if (!textBlock) return Response.json({ error: "No response from API" }, { status: 500 });
+    if (!textBlock) {
+      await reportError("research", new Error("Anthropic returned no text block"));
+      return Response.json({ error: "No response from API" }, { status: 500 });
+    }
 
     const raw   = textBlock.text.trim();
     const clean = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -149,7 +153,10 @@ Rules:
     } catch {
       const match = clean.match(/\{[\s\S]*\}/);
       if (match) parsed = JSON.parse(match[0]);
-      else return Response.json({ error: "Could not parse response" }, { status: 500 });
+      else {
+        await reportError("research", new Error("Could not parse AI response as JSON"));
+        return Response.json({ error: "Could not parse response" }, { status: 500 });
+      }
     }
 
     return Response.json(parsed);
