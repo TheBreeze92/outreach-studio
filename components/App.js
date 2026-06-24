@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock, Send } from "lucide-react";
-import { buildMailtoUrl } from "../lib/buildMailtoUrl.js";
+import { buildGmailUrl } from "../lib/buildMailtoUrl.js";
 
 const cream = "#fcfbf7";
 const ink   = "#1a1714";
@@ -425,27 +425,26 @@ export default function App() {
                   onChange={e => setProspectEmail(e.target.value)}
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const url = buildMailtoUrl({
-                    prospectEmail,
-                    subject: result.subject,
-                    parts: EMAIL_PARTS.map(([k]) => result[k] || ""),
-                    greeting: result.greeting,
-                    senderName: senderName || "Alex Johnson",
-                  });
-                  window.location.href = url;
-                }}
+              <a
+                href={buildGmailUrl({
+                  prospectEmail,
+                  subject: result.subject,
+                  parts: EMAIL_PARTS.map(([k]) => result[k] || ""),
+                  greeting: result.greeting,
+                  senderName: senderName || "Alex Johnson",
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   background: choc, color: cream, border: `2px solid ${ink}`,
                   boxShadow: shadow(4, amber), padding: "16px 24px",
                   fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase",
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: 10, textDecoration: "none",
                 }}
               >
                 <Send size={16} /> Send email
-              </button>
+              </a>
             </div>
 
             <button type="button" onClick={reset}
