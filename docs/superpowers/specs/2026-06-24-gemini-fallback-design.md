@@ -46,8 +46,8 @@ Common case (credits exhausted): Anthropic returns 402 in <1s + Gemini takes ~20
 
 ## Gemini Integration
 
-- **Model:** `gemini-2.5-pro`
-- **API endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent`
+- **Model:** `gemini-2.5-flash`
+- **API endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
 - **PDF:** Passed as `inline_data` with `mime_type: "application/pdf"` and base64 data — same approach as Anthropic, no file upload step
 - **Web search:** `{ "google_search": {} }` tool — Google's built-in search grounding
 - **Response parsing:** Extract the last `text` part from `candidates[0].content.parts`, then run through the same JSON cleanup and `JSON.parse` logic already in the route

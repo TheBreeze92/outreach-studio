@@ -15,7 +15,7 @@
 - Gemini abort timeout: `35000` ms
 - Fallback triggers: HTTP 402, 429, 5xx from Anthropic, or `AbortError` (no `.status` on thrown error)
 - No fallback on HTTP 400 (bad request — Gemini would fail identically)
-- Gemini model: `gemini-2.5-pro`
+- Gemini model: `gemini-2.5-flash`
 - New env var: `GOOGLE_AI_API_KEY`
 - All existing tests in `tests/lib/reportError.test.js` must keep passing
 
@@ -286,7 +286,7 @@ export async function callGemini(pdfBase64, prompt) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 35000);
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
 
   const resp = await fetch(url, {
     method: "POST",
