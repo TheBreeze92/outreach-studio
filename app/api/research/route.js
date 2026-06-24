@@ -90,7 +90,10 @@ export async function callGemini(pdfBase64, prompt) {
 }
 
 export async function POST(req) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+  const hasGemini    = !!process.env.GOOGLE_AI_API_KEY;
+
+  if (!hasAnthropic && !hasGemini) {
     return Response.json({ error: "Server misconfiguration." }, { status: 500 });
   }
 
@@ -192,58 +195,24 @@ Rules:
 - Every email field must be populated
 - Return ONLY valid JSON`;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 55000);
-
-    const anthropicResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2000,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-        messages: [{
-          role: "user",
-          content: [
-            { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
-            { type: "text", text: prompt }
-          ]
-        }]
-      })
-    });
-    clearTimeout(timer);
-
-    if (!anthropicResp.ok) {
-      const err = await anthropicResp.text();
-      await reportError("research", new Error(`Anthropic API error: ${err.slice(0, 200)}`));
-      return Response.json({ error: `Anthropic API error: ${err.slice(0, 200)}` }, { status: 500 });
-    }
-
-    const data = await anthropicResp.json();
-    const textBlock = [...(data.content || [])].reverse().find(b => b.type === "text");
-    if (!textBlock) {
-      await reportError("research", new Error("Anthropic returned no text block"));
-      return Response.json({ error: "No response from API" }, { status: 500 });
-    }
-
-    const raw   = textBlock.text.trim();
-    const clean = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-
     let parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      const match = clean.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else {
-        await reportError("research", new Error("Could not parse AI response as JSON"));
-        return Response.json({ error: "Could not parse response" }, { status: 500 });
+
+    if (hasAnthropic) {
+      try {
+        parsed = await callAnthropic(pdfBase64, prompt);
+      } catch (anthropicErr) {
+        const s = anthropicErr.status;
+        const shouldFallback = !s || s === 402 || s === 429 || s >= 500;
+        if (!shouldFallback || !hasGemini) {
+          await reportError("research", anthropicErr);
+          return Response.json({ error: anthropicErr.message || "Server error" }, { status: 500 });
+        }
+        reportError("research", new Error(`Anthropic failed (${s ?? "timeout"}), falling back to Gemini: ${anthropicErr.message}`)).catch(() => {});
       }
+    }
+
+    if (!parsed) {
+      parsed = await callGemini(pdfBase64, prompt);
     }
 
     return Response.json(parsed);
