@@ -43,7 +43,8 @@ export async function callAnthropic(pdfBase64, prompt) {
   if (!resp.ok) {
     const err = await resp.text();
     const error = new Error(`Anthropic ${resp.status}: ${err.slice(0, 200)}`);
-    error.status = resp.status;
+    // Anthropic returns 400 for credit exhaustion; treat it as 402 so the fallback fires
+    error.status = (resp.status === 400 && err.includes("credit balance")) ? 402 : resp.status;
     throw error;
   }
 
@@ -205,7 +206,7 @@ Rules:
         const shouldFallback = !s || s === 402 || s === 429 || s >= 500;
         if (!shouldFallback || !hasGemini) {
           await reportError("research", anthropicErr);
-          return Response.json({ error: anthropicErr.message || "Server error" }, { status: 500 });
+          return Response.json({ error: "Something went wrong — please try again." }, { status: 500 });
         }
         reportError("research", new Error(`Anthropic failed (${s ?? "timeout"}), falling back to Gemini: ${anthropicErr.message}`)).catch(() => {});
       }
@@ -221,7 +222,7 @@ Rules:
     await reportError("research", e);
     const msg = e.name === "AbortError"
       ? "Research timed out — please try again."
-      : e.message || "Server error";
+      : "Something went wrong — please try again.";
     return Response.json({ error: msg }, { status: 500 });
   }
 }
