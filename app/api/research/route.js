@@ -16,6 +16,20 @@ export async function POST(req) {
     try { company = new URL(url).hostname.replace(/^www\./, ""); } catch { company = "your company"; }
     const product = productDescription || "We help businesses grow through tailored outreach strategies";
 
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const now = new Date();
+    const currentMonth = MONTHS[now.getMonth()];
+    const currentYear  = now.getFullYear();
+    const d1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prev1Month = MONTHS[d1.getMonth()];
+    const prev1Year  = d1.getFullYear();
+    const d2 = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const prev2Month = MONTHS[d2.getMonth()];
+    const prev2Year  = d2.getFullYear();
+    const d3 = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const prev3Month = MONTHS[d3.getMonth()];
+    const prev3Year  = d3.getFullYear();
+
     const prompt = `You are an elite B2B sales researcher and cold-email copywriter.
 
 STEP 1 — EXTRACT FROM PDF
@@ -25,16 +39,16 @@ Read the attached LinkedIn profile PDF. Extract:
 - Their current employer / company name
 
 STEP 2 — WEB RESEARCH (use your web_search tool)
-The current date is June 2026. You are hunting for a purchasing signal from the last TWO MONTHS only (May 2026 or June 2026).
+The current date is ${currentMonth} ${currentYear}. You are hunting for a purchasing signal from the last TWO TO THREE MONTHS (${prev2Month} ${prev2Year}, ${prev1Month} ${prev1Year}, or ${currentMonth} ${currentYear}).
 
 RECENCY RULES — NON-NEGOTIABLE:
-- ONLY use signals clearly dated May 2026 or June 2026
-- Anything from 2025 or earlier is TOO OLD — discard it entirely
-- April 2026 is borderline — only fall back to it if absolutely nothing from May/June exists
+- PRIORITISE signals from ${prev1Month} ${prev1Year} or ${currentMonth} ${currentYear}
+- ${prev2Month} ${prev2Year} and ${prev3Month} ${prev3Year} are acceptable if nothing more recent exists
+- Anything from ${currentYear - 1} or earlier is TOO OLD — discard it entirely
 - NEVER stretch or recycle old news. If nothing recent exists, say so honestly.
 - Always check the publication date of any article before using it as a signal
 
-Good signals to look for (must be May or June 2026):
+Good signals to look for (ideally from the last 2-3 months):
 - New funding round or investment
 - New product or service launch
 - Rebrand or strategic pivot
@@ -44,10 +58,10 @@ Good signals to look for (must be May or June 2026):
 - A recent interview, podcast, or press feature of the prospect themselves
 
 Run a maximum of 2 focused searches before concluding. Suggested search queries (adapt to the actual name/company):
-1. "[Company name] news May OR June 2026"
-2. "[Prospect name] [Company] 2026"
+1. "[Company name] news ${prev1Month} OR ${currentMonth} ${currentYear}"
+2. "[Prospect name] [Company] ${currentYear}"
 
-If you cannot find anything from May or June 2026, set signal_headline to "No signal found in the last 2 months" and explain what you searched for in signal_detail. Still write the best possible email using general knowledge of the company.
+If you cannot find anything from the last 3 months, set signal_headline to "No recent signal found" and explain what you searched for in signal_detail. Still write the best possible email using the most recent signal you can find, or general knowledge of the company if nothing exists.
 
 SENDER CONTEXT:
 - Name: ${sender}
@@ -74,7 +88,7 @@ Return ONLY this JSON object, no markdown fences, no commentary:
   "signal_detail": "2-3 sentences describing the signal with enough detail the reader can verify it",
   "signal_source_url": "the actual URL of the article or page where you found this signal",
   "signal_source_name": "name of the publication or site (e.g. Campaign, Marketing Week, TechCrunch)",
-  "signal_date": "exact date of the signal e.g. 'June 2026' or 'May 2026' — must be 2026",
+  "signal_date": "exact date of the signal e.g. '${currentMonth} ${currentYear}' or '${prev1Month} ${prev1Year}'",
   "subject": "email subject line",
   "greeting": "Hi [first name],",
   "hook": "part 1 text",
@@ -87,7 +101,7 @@ Return ONLY this JSON object, no markdown fences, no commentary:
 
 Rules:
 - signal_source_url must be a real URL you actually found during web search, not a guess
-- If you cannot find a signal from May or June 2026, set signal_headline to "No signal found in the last 2 months" and explain what you searched in signal_detail — do NOT use signals from 2025 or earlier
+- If you cannot find a recent signal, set signal_headline to "No recent signal found" and explain what you searched in signal_detail — do NOT use signals from ${currentYear - 1} or earlier
 - Every email field must be populated
 - Return ONLY valid JSON`;
 
