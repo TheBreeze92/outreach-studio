@@ -53,6 +53,42 @@ export async function callAnthropic(pdfBase64, prompt) {
   return parseJsonResponse(textBlock.text);
 }
 
+export async function callGemini(pdfBase64, prompt) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 35000);
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
+
+  const resp = await fetch(url, {
+    method: "POST",
+    signal: controller.signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
+          { text: prompt },
+        ],
+      }],
+      tools: [{ google_search: {} }],
+    }),
+  });
+  clearTimeout(timer);
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    const error = new Error(`Gemini ${resp.status}: ${err.slice(0, 200)}`);
+    error.status = resp.status;
+    throw error;
+  }
+
+  const data = await resp.json();
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const textBlock = [...parts].reverse().find(p => p.text);
+  if (!textBlock) throw new Error("Gemini returned no text block");
+  return parseJsonResponse(textBlock.text);
+}
+
 export async function POST(req) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ error: "Server misconfiguration." }, { status: 500 });
