@@ -95,7 +95,7 @@ export async function POST(req) {
   const hasGemini    = !!process.env.GOOGLE_AI_API_KEY;
 
   if (!hasAnthropic && !hasGemini) {
-    return Response.json({ error: "Server misconfiguration." }, { status: 500 });
+    return Response.json({ error: "We're having a technical issue — our team has been notified. Please try again in a couple of minutes." }, { status: 500 });
   }
 
   try {
@@ -206,7 +206,7 @@ Rules:
         const shouldFallback = !s || s === 402 || s === 429 || s >= 500;
         if (!shouldFallback || !hasGemini) {
           await reportError("research", anthropicErr);
-          return Response.json({ error: "Something went wrong — please try again." }, { status: 500 });
+          return Response.json({ error: "We're having a technical issue right now — our team has been notified. Please try again in a couple of minutes." }, { status: 500 });
         }
         reportError("research", new Error(`Anthropic failed (${s ?? "timeout"}), falling back to Gemini: ${anthropicErr.message}`)).catch(() => {});
       }
@@ -221,8 +221,8 @@ Rules:
   } catch (e) {
     await reportError("research", e);
     const msg = e.name === "AbortError"
-      ? "Research timed out — please try again."
-      : "Something went wrong — please try again.";
+      ? "That one took longer than expected — please try again."
+      : "We're having a technical issue right now — our team has been notified. Please try again in a couple of minutes.";
     return Response.json({ error: msg }, { status: 500 });
   }
 }

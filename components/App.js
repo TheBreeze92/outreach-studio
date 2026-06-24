@@ -137,8 +137,9 @@ export default function App() {
 
       let data;
       if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(`API error (${resp.status}): ${text.slice(0, 200)}`);
+        let msg = "Something went wrong on our end — please try again shortly.";
+        try { const j = await resp.json(); if (j.error) msg = j.error; } catch {}
+        throw new Error(msg);
       }
       data = await resp.json();
       if (data.error) throw new Error(data.error);
