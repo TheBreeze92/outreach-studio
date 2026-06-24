@@ -2,6 +2,57 @@ import { reportError } from "../../../lib/reportError.js";
 
 export const maxDuration = 60;
 
+function parseJsonResponse(raw) {
+  const clean = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error("Could not parse AI response as JSON");
+  }
+}
+
+export async function callAnthropic(pdfBase64, prompt) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    signal: controller.signal,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfBase64 } },
+          { type: "text", text: prompt },
+        ],
+      }],
+    }),
+  });
+  clearTimeout(timer);
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    const error = new Error(`Anthropic ${resp.status}: ${err.slice(0, 200)}`);
+    error.status = resp.status;
+    throw error;
+  }
+
+  const data = await resp.json();
+  const textBlock = [...(data.content || [])].reverse().find(b => b.type === "text");
+  if (!textBlock) throw new Error("Anthropic returned no text block");
+  return parseJsonResponse(textBlock.text);
+}
+
 export async function POST(req) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ error: "Server misconfiguration." }, { status: 500 });
