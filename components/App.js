@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock, Send } from "lucide-react";
+import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock, Send, ChevronDown, ChevronUp } from "lucide-react";
 import { buildGmailUrl } from "../lib/buildMailtoUrl.js";
 
 const cream = "#fcfbf7";
@@ -58,7 +58,7 @@ const STEPS = [
 ];
 
 export default function App() {
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(process.env.NODE_ENV === "development");
 
   useEffect(() => {
     if (localStorage.getItem("cos_subscribed") === "1") setIsSubscribed(true);
@@ -67,6 +67,7 @@ export default function App() {
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState("");
 
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [senderName, setSenderName] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -250,6 +251,48 @@ export default function App() {
           <>
             {!result && !loading && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ border: `2px solid ${ink}`, boxShadow: shadow(4), background: white }}>
+                  <div
+                    onClick={() => setTutorialOpen(o => !o)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 16px", cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ ...lbl, fontSize: 9, letterSpacing: "0.18em", margin: 0 }}>
+                      How to export your LinkedIn profile as a PDF
+                    </span>
+                    {tutorialOpen ? <ChevronUp size={16} color={ink} /> : <ChevronDown size={16} color={ink} />}
+                  </div>
+                  {tutorialOpen && (
+                    <>
+                      <iframe
+                        src="/linkedin-pdf-tutorial.html"
+                        style={{ display: "block", width: "100%", border: "none" }}
+                        title="LinkedIn PDF export tutorial"
+                        onLoad={e => {
+                          try {
+                            e.target.style.height = e.target.contentDocument.documentElement.scrollHeight + "px";
+                          } catch (_) {
+                            e.target.style.height = "700px";
+                          }
+                        }}
+                      />
+                      <div style={{ padding: "12px 16px", borderTop: `1px solid #e7e2d8`, textAlign: "right" }}>
+                        <button
+                          onClick={() => setTutorialOpen(false)}
+                          style={{
+                            background: "none", border: `1px solid ${ink}`, padding: "6px 16px",
+                            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                            textTransform: "uppercase", cursor: "pointer", color: ink,
+                          }}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div style={{ background: white, border: `2px solid ${ink}`, boxShadow: shadow(4), padding: "20px 20px 24px" }}>
                   <p style={{ ...lbl, marginBottom: 16, fontSize: 9, letterSpacing: "0.18em", borderBottom: `1px solid #e7e2d8`, paddingBottom: 10 }}>
                     Your details — sender metadata
