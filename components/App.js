@@ -304,15 +304,8 @@ export default function App() {
                       <div style={{ flex: 1, overflow: "auto" }}>
                         <iframe
                           src="/linkedin-pdf-tutorial.html"
-                          style={{ display: "block", width: "100%", border: "none" }}
+                          style={{ display: "block", width: "100%", height: 700, border: "none" }}
                           title="LinkedIn PDF export tutorial"
-                          onLoad={e => {
-                            try {
-                              e.target.style.height = e.target.contentDocument.documentElement.scrollHeight + "px";
-                            } catch (_) {
-                              e.target.style.height = "700px";
-                            }
-                          }}
                         />
                       </div>
                     </div>
