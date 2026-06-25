@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export const metadata = {
   title: "Cold Outreach Studio",
   description: "Turn cold profiles into high-signal outreach using our signature 6-part framework.",
