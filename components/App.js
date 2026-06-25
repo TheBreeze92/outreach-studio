@@ -59,9 +59,14 @@ const STEPS = [
 
 export default function App() {
   const [isSubscribed, setIsSubscribed] = useState(process.env.NODE_ENV === "development");
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("cos_subscribed") === "1") setIsSubscribed(true);
+    const check = () => setIsMobile(window.innerWidth < 600);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
   const [subscriberEmail, setSubscriberEmail] = useState("");
   const [subLoading, setSubLoading] = useState(false);
@@ -212,7 +217,7 @@ export default function App() {
 
         {/* SUBSCRIBER GATE WALL */}
         {!isSubscribed ? (
-          <div className="rise" style={{ background: white, border: `2px solid ${ink}`, boxShadow: shadow(6, choc), padding: "40px 32px", position: "relative" }}>
+          <div className="rise" style={{ background: white, border: `2px solid ${ink}`, boxShadow: shadow(6, choc), padding: isMobile ? "28px 16px" : "40px 32px", position: "relative" }}>
             <div style={{ width: 44, height: 44, border: `2px solid #d4af37`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <Lock size={18} color={ink} />
             </div>
@@ -338,7 +343,7 @@ export default function App() {
                   style={{
                     border: `2px dashed ${dragging ? ink : "#c8c2b6"}`,
                     background: dragging ? "#f5f0e8" : white,
-                    padding: "40px 24px", textAlign: "center", cursor: "pointer",
+                    padding: isMobile ? "28px 16px" : "40px 24px", textAlign: "center", cursor: "pointer",
                     transition: "all .15s", boxShadow: dragging ? shadow(4) : "none",
                   }}
                 >
@@ -426,7 +431,7 @@ export default function App() {
             </div>
 
             {/* SIGNAL CARD */}
-            <div className="rise" style={{ background: choc, color: cream, border: `2px solid ${ink}`, boxShadow: shadow(6), padding: "26px 24px 22px", position: "relative", overflow: "hidden", animationDelay: ".05s" }}>
+            <div className="rise" style={{ background: choc, color: cream, border: `2px solid ${ink}`, boxShadow: shadow(6), padding: isMobile ? "20px 16px 18px" : "26px 24px 22px", position: "relative", overflow: "hidden", animationDelay: ".05s" }}>
               <span style={{ position: "absolute", right: 10, top: -8, fontFamily: "'Fraunces',serif", fontStyle: "italic", fontSize: 120, color: "rgba(255,255,255,0.04)", lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>now</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <span style={{ width: 7, height: 7, borderRadius: 99, background: amber, animation: "pulse 1.8s ease-in-out infinite" }} />
@@ -459,7 +464,7 @@ export default function App() {
                 <span style={{ fontFamily: "'Fraunces',serif", fontSize: "1.15rem", fontWeight: 600 }}>Your cold email</span>
               </div>
 
-              <div style={{ padding: "20px 20px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ padding: isMobile ? "16px 14px 20px" : "20px 20px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
                   <span style={lbl}>Subject line</span>
                   <p style={{ background: cream, border: `1.5px solid ${ink}`, padding: "10px 12px", fontWeight: 700, fontSize: 14, margin: 0 }}>{result.subject}</p>
