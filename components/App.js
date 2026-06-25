@@ -272,7 +272,7 @@ export default function App() {
                     style={{
                       position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
                       zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-                      padding: 24,
+                      padding: "8px",
                     }}
                   >
                     <div
