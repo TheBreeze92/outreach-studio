@@ -6,7 +6,7 @@
 ## Goal
 
 Convert Cold Outreach Studio from a free tool (email gate → unlimited use) into one that
-produces revenue. Every account gets **3 free generations**, then must buy a **$29 / 50-credit
+produces revenue. Every account gets **3 free generations**, then must buy a **$49 / 50-credit
 pack** to continue. Credits are tracked server-side per user; a Stripe webhook tops them up.
 No subscriptions.
 
@@ -102,7 +102,7 @@ limitation.
 ### Stripe
 
 - **`/api/checkout`** (authenticated): creates a Stripe Checkout Session —
-  `mode: "payment"`, one line item (`STRIPE_PRICE_ID`, $29), `client_reference_id = user.id`,
+  `mode: "payment"`, one line item (`STRIPE_PRICE_ID`, $49), `client_reference_id = user.id`,
   `customer_email` prefilled, `success_url` → app `?paid=1`, `cancel_url` → app. Returns the
   hosted Checkout `url`; the client redirects. No Stripe secrets reach the browser.
 - **`/api/stripe-webhook`**: reads the **raw** request body, verifies the signature with
@@ -123,7 +123,7 @@ limitation.
 |---|---|
 | `STRIPE_SECRET_KEY` | Stripe server SDK (checkout + webhook) |
 | `STRIPE_WEBHOOK_SECRET` | Verify webhook signatures |
-| `STRIPE_PRICE_ID` | The $29 / 50-credit price object |
+| `STRIPE_PRICE_ID` | The $49 / 50-credit price object |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase Auth (today only the service role is used) |
 | `NEXT_PUBLIC_SITE_URL` | Magic-link redirect + Stripe success/cancel URLs |
 
@@ -153,7 +153,7 @@ Vitest, matching `tests/` conventions; Supabase and Stripe mocked.
 ## Reference: recommended paywall / landing copy (operational, not built here)
 
 - Paywall card heading: **"You've used your 3 free emails."**
-- Sub: **"$29 → 50 more signal-researched emails. One-time, no subscription."**
+- Sub: **"$49 → 50 more signal-researched emails. One-time, no subscription."**
 - Niche angle for the campaign + headline: **"Founders doing their own prospecting."**
 - First action after ship: email the existing `signups` list with that offer and headline;
   let the first ~10 payments validate price + niche, then raise/niche down from there.
