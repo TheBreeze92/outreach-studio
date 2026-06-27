@@ -119,11 +119,20 @@ export async function POST(req) {
   try {
     const { pdfBase64, senderName, companyUrl, productDescription } = await req.json();
 
-    const sender = senderName || "Alex Johnson";
-    const url    = companyUrl || "https://yourcompany.com";
+    if (!pdfBase64) {
+      return Response.json({ error: "Upload a LinkedIn PDF first." }, { status: 400 });
+    }
+    const sender  = (senderName || "").trim();
+    const url     = (companyUrl || "").trim();
+    const product = (productDescription || "").trim();
+    if (!sender || !url || !product) {
+      return Response.json(
+        { error: "Your name, company URL, and product description are all required — they're what tailor the email." },
+        { status: 400 }
+      );
+    }
     let company;
-    try { company = new URL(url).hostname.replace(/^www\./, ""); } catch { company = "your company"; }
-    const product = productDescription || "We help businesses grow through tailored outreach strategies";
+    try { company = new URL(url).hostname.replace(/^www\./, ""); } catch { company = url; }
 
     const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const now = new Date();
