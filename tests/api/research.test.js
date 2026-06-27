@@ -1,4 +1,16 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+
+const mockGetUser = vi.fn();
+const mockGetBalance = vi.fn();
+const mockConsumeCredit = vi.fn();
+
+vi.mock("../../lib/supabaseServer.js", () => ({ getUser: (...a) => mockGetUser(...a) }));
+vi.mock("../../lib/supabaseAdmin.js", () => ({ getAdminClient: () => ({}) }));
+vi.mock("../../lib/credits.js", () => ({
+  getBalance: (...a) => mockGetBalance(...a),
+  consumeCredit: (...a) => mockConsumeCredit(...a),
+}));
+
 import { callAnthropic, callGemini, POST } from "../../app/api/research/route.js";
 
 describe("callAnthropic", () => {
@@ -141,6 +153,10 @@ describe("POST handler — provider fallback", () => {
     process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
     process.env.SLACK_ERROR_WEBHOOK_URL = "";
     global.fetch = vi.fn();
+    mockGetUser.mockResolvedValue({ id: "user-1", email: "user@example.com" });
+    mockGetBalance.mockResolvedValue({ free_remaining: 3, paid_credits: 0 });
+    mockConsumeCredit.mockReset();
+    mockConsumeCredit.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -245,5 +261,70 @@ describe("POST handler — provider fallback", () => {
     const response = await POST(makeRequest());
     expect(response.status).toBe(500);
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST handler — auth + credit gating", () => {
+  let savedEnv;
+
+  beforeEach(() => {
+    savedEnv = {
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY,
+    };
+    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    process.env.GOOGLE_AI_API_KEY = "test-gemini-key";
+    global.fetch = vi.fn();
+    mockGetUser.mockResolvedValue({ id: "user-1", email: "user@example.com" });
+    mockGetBalance.mockResolvedValue({ free_remaining: 3, paid_credits: 0 });
+    mockConsumeCredit.mockReset();
+    mockConsumeCredit.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    Object.assign(process.env, savedEnv);
+    vi.restoreAllMocks();
+  });
+
+  function makeRequest() {
+    return { json: async () => ({ pdfBase64: "dGVzdA==", senderName: "S", companyUrl: "https://x.com", productDescription: "p" }) };
+  }
+
+  function mockAnthropicSuccess() {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ content: [{ type: "text", text: JSON.stringify({ prospect_name: "Jane" }) }] }),
+    });
+  }
+
+  it("returns 401 and does no AI work when signed out", async () => {
+    mockGetUser.mockResolvedValue(null);
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 402 with paywall flag when out of credits", async () => {
+    mockGetBalance.mockResolvedValue({ free_remaining: 0, paid_credits: 0 });
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(402);
+    expect((await response.json()).paywall).toBe(true);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("consumes one credit after a successful generation", async () => {
+    mockAnthropicSuccess();
+    await POST(makeRequest());
+    expect(mockConsumeCredit).toHaveBeenCalledTimes(1);
+    expect(mockConsumeCredit).toHaveBeenCalledWith({}, "user-1");
+  });
+
+  it("does NOT consume a credit when generation fails", async () => {
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 429, text: async () => "rate limited" })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "gemini error" });
+    const response = await POST(makeRequest());
+    expect(response.status).toBe(500);
+    expect(mockConsumeCredit).not.toHaveBeenCalled();
   });
 });

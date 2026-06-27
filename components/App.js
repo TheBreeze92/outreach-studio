@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Lock, Send, ChevronDown } from "lucide-react";
 import { buildGmailUrl } from "../lib/buildMailtoUrl.js";
+import { getBrowserClient } from "../lib/supabaseBrowser.js";
 
 /* Color constants kept only for Lucide icon props */
 const ink   = "#1a1714";
@@ -54,10 +55,41 @@ const STEPS = [
 ];
 
 export default function App() {
-  const [isSubscribed, setIsSubscribed] = useState(process.env.NODE_ENV === "development");
+  const supabaseRef = useRef(null);
+  const sb = () => {
+    if (!supabaseRef.current) supabaseRef.current = getBrowserClient();
+    return supabaseRef.current;
+  };
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+  const [balance, setBalance] = useState(null);   // { free_remaining, paid_credits } | null
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  async function refreshBalance() {
+    try {
+      const resp = await fetch("/api/credits");
+      if (resp.ok) setBalance(await resp.json());
+    } catch { /* non-fatal */ }
+  }
 
   useEffect(() => {
-    if (localStorage.getItem("cos_subscribed") === "1") setIsSubscribed(true);
+    sb().auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthReady(true);
+      if (data.session) refreshBalance();
+    });
+    const { data: sub } = sb().auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (s) refreshBalance();
+    });
+    // After returning from Stripe Checkout, refresh and clean the URL.
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("paid") === "1") {
+      refreshBalance();
+      window.history.replaceState({}, "", "/");
+    }
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   const [subscriberEmail,   setSubscriberEmail]   = useState("");
@@ -92,19 +124,36 @@ export default function App() {
     setSubLoading(true);
     setSubError("");
     try {
-      const resp = await fetch("/api/subscribe", {
+      // Keep the marketing list growing (fire-and-forget).
+      fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: subscriberEmail })
+        body: JSON.stringify({ email: subscriberEmail }),
+      }).catch(() => {});
+
+      const { error } = await sb().auth.signInWithOtp({
+        email: subscriberEmail,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      localStorage.setItem("cos_subscribed", "1");
-      setIsSubscribed(true);
+      if (error) throw new Error(error.message);
+      setMagicSent(true);
     } catch (err) {
-      setSubError(err.message || "Failed to process request.");
+      setSubError(err.message || "Could not send the sign-in link.");
     } finally {
       setSubLoading(false);
+    }
+  }
+
+  async function startCheckout() {
+    setCheckoutLoading(true);
+    try {
+      const resp = await fetch("/api/checkout", { method: "POST" });
+      const data = await resp.json();
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error(data.error || "Could not start checkout.");
+    } catch (err) {
+      setError(err.message || "Could not start checkout.");
+      setCheckoutLoading(false);
     }
   }
 
@@ -126,6 +175,14 @@ export default function App() {
         body: JSON.stringify({ pdfBase64: b64, senderName, companyUrl, productDescription })
       });
 
+      if (resp.status === 402) {
+        setShowPaywall(true);
+        return;
+      }
+      if (resp.status === 401) {
+        setSession(null);
+        throw new Error("Your session expired — please sign in again.");
+      }
       if (!resp.ok) {
         let msg = "Something went wrong on our end — please try again shortly.";
         try { const j = await resp.json(); if (j.error) msg = j.error; } catch {}
@@ -147,6 +204,7 @@ export default function App() {
         }
       }
       setResult(data);
+      refreshBalance();
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
     } finally {
@@ -175,15 +233,28 @@ export default function App() {
           </p>
         </header>
 
+        {/* CREDIT COUNTER */}
+        {session && balance && (
+          <div className="credit-counter">
+            {balance.free_remaining > 0
+              ? `${balance.free_remaining} free ${balance.free_remaining === 1 ? "email" : "emails"} left`
+              : `${balance.paid_credits} ${balance.paid_credits === 1 ? "email" : "emails"} left`}
+          </div>
+        )}
+
         {/* GATE */}
-        {!isSubscribed ? (
+        {!authReady ? (
+          <div className="rise gate-card">
+            <p className="gate-desc">Loading…</p>
+          </div>
+        ) : !session ? (
           <div className="rise gate-card">
             <div className="gate-lock">
               <Lock size={18} color={ink} />
             </div>
-            <h2 className="gate-heading">Unlock Access to the Studio</h2>
+            <h2 className="gate-heading">Sign in to start</h2>
             <p className="gate-desc">
-              Join our network of B2B professionals. Drop your email below to instantly activate the 6-part AI outreach generator.
+              Enter your email and we'll send you a magic link — no password.
             </p>
             <form onSubmit={handleSubscribe} className="gate-form">
               <input
@@ -197,14 +268,32 @@ export default function App() {
               />
               {subError && <p className="gate-error">⚠ {subError}</p>}
               <button type="submit" className="btn-primary" disabled={subLoading}>
-                {subLoading ? "Activating..." : "Get Free Access"}
+                {subLoading ? "Sending link..." : "Email me a magic link"}
               </button>
             </form>
+            {magicSent && (
+              <p className="gate-desc" style={{ marginTop: 12 }}>
+                ✓ Check your inbox for the sign-in link.
+              </p>
+            )}
           </div>
         ) : (
           <>
+            {/* PAYWALL */}
+            {showPaywall && (
+              <div className="rise gate-card">
+                <h2 className="gate-heading">You've used your 3 free emails.</h2>
+                <p className="gate-desc">
+                  $49 → 50 more signal-researched emails. One-time, no subscription.
+                </p>
+                <button type="button" className="btn-primary" onClick={startCheckout} disabled={checkoutLoading}>
+                  {checkoutLoading ? "Starting checkout..." : "Buy 50 emails — $49"}
+                </button>
+              </div>
+            )}
+
             {/* MAIN FORM */}
-            {!result && !loading && (
+            {!result && !loading && !showPaywall && (
               <div className="results-stack">
 
                 {/* Tutorial toggle */}

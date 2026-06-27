@@ -1,4 +1,7 @@
 import { reportError } from "../../../lib/reportError.js";
+import { getUser } from "../../../lib/supabaseServer.js";
+import { getAdminClient } from "../../../lib/supabaseAdmin.js";
+import { getBalance, consumeCredit } from "../../../lib/credits.js";
 
 export const maxDuration = 60;
 
@@ -96,6 +99,20 @@ export async function POST(req) {
 
   if (!hasAnthropic && !hasGemini) {
     return Response.json({ error: "We're having a technical issue — our team has been notified. Please try again in a couple of minutes." }, { status: 500 });
+  }
+
+  const user = await getUser();
+  if (!user) {
+    return Response.json({ error: "Please sign in to generate emails." }, { status: 401 });
+  }
+
+  const admin = getAdminClient();
+  const balance = await getBalance(admin, user.id);
+  if (balance.free_remaining <= 0 && balance.paid_credits <= 0) {
+    return Response.json(
+      { error: "You've used all your credits.", paywall: true },
+      { status: 402 }
+    );
   }
 
   try {
@@ -216,6 +233,12 @@ Rules:
       parsed = await callGemini(pdfBase64, prompt);
     }
 
+    try {
+      await consumeCredit(admin, user.id);
+    } catch (creditErr) {
+      // Never withhold a generated email over a ledger hiccup; just log it.
+      reportError("consume-credit", creditErr).catch(() => {});
+    }
     return Response.json(parsed);
 
   } catch (e) {
