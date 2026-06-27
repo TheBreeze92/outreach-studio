@@ -15,6 +15,18 @@ function domainFromUrl(url) {
   catch { return url; }
 }
 
+function timeAgo(iso) {
+  const then = new Date(iso).getTime();
+  if (!then) return "";
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return days === 1 ? "yesterday" : `${days}d ago`;
+}
+
 function fileToBase64(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -83,6 +95,7 @@ export default function App() {
   const [balance, setBalance] = useState(null);   // { free_remaining, paid_credits } | null
   const [showPaywall, setShowPaywall] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [recent, setRecent] = useState([]);
 
   async function refreshBalance() {
     try {
@@ -91,15 +104,37 @@ export default function App() {
     } catch { /* non-fatal */ }
   }
 
+  async function loadRecent() {
+    try {
+      const { data } = await sb()
+        .from("generations")
+        .select("id, created_at, signal_tier, signal_headline, replied, output")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      setRecent(data || []);
+    } catch { /* non-fatal */ }
+  }
+
+  async function markReply(id, didReply) {
+    setRecent(rows => rows.map(r => (r.id === id ? { ...r, replied: didReply } : r)));
+    try {
+      await fetch("/api/generations/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ generation_id: id, replied: didReply }),
+      });
+    } catch { /* best-effort */ }
+  }
+
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthReady(true);
-      if (data.session) refreshBalance();
+      if (data.session) { refreshBalance(); loadRecent(); }
     });
     const { data: sub } = sb().auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (s) refreshBalance();
+      if (s) { refreshBalance(); loadRecent(); }
     });
     // After returning from Stripe Checkout, refresh and clean the URL.
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("paid") === "1") {
@@ -187,6 +222,10 @@ export default function App() {
 
   async function generate() {
     if (!file) { setError("Upload a LinkedIn PDF first."); return; }
+    if (!senderName.trim() || !companyUrl.trim() || !productDescription.trim()) {
+      setError("Fill in your name, company URL, and what your product does — they tailor the email.");
+      return;
+    }
     setLoading(true); setError(""); setResult(null); setStepIdx(0);
 
     let i = 0;
@@ -233,6 +272,7 @@ export default function App() {
       }
       setResult(data);
       refreshBalance();
+      loadRecent();
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
     } finally {
@@ -368,18 +408,18 @@ export default function App() {
 
                 {/* Your Details */}
                 <div className="details-card">
-                  <span className="details-card__heading">Your details — sender metadata</span>
+                  <span className="details-card__heading">Your details — all required, they tailor the email</span>
                   <div className="details-field">
-                    <label className="form-label">Your name</label>
-                    <input className="form-input" placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} />
+                    <label className="form-label">Your name <span className="req">*</span></label>
+                    <input className="form-input" placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} required />
                   </div>
                   <div className="details-field">
-                    <label className="form-label">Company URL</label>
-                    <input className="form-input" placeholder="e.g. https://acmecorp.com" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} />
+                    <label className="form-label">Company URL <span className="req">*</span></label>
+                    <input className="form-input" placeholder="e.g. https://acmecorp.com" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} required />
                   </div>
                   <div className="details-field">
-                    <label className="form-label">What does your product do?</label>
-                    <input className="form-input" placeholder="e.g. We help B2B sales teams book more meetings by turning prospect research into personalised emails in seconds" value={productDescription} onChange={e => setProductDescription(e.target.value)} />
+                    <label className="form-label">What does your product do? <span className="req">*</span></label>
+                    <input className="form-input" placeholder="e.g. We help B2B sales teams book more meetings by turning prospect research into personalised emails in seconds" value={productDescription} onChange={e => setProductDescription(e.target.value)} required />
                   </div>
                 </div>
 
@@ -412,9 +452,50 @@ export default function App() {
 
                 {error && <p className="form-error">⚠ {error}</p>}
 
-                <button type="button" className="btn-primary" onClick={generate} disabled={!file}>
+                <button type="button" className="btn-primary" onClick={generate}
+                  disabled={!file || !senderName.trim() || !companyUrl.trim() || !productDescription.trim()}>
                   <Search size={16} /> Research prospect &amp; write email
                 </button>
+              </div>
+            )}
+
+            {/* RECENT EMAILS */}
+            {!result && !loading && !showPaywall && recent.length > 0 && (
+              <div className="recent-card">
+                <span className="recent-card__heading">Your recent emails</span>
+                <p className="recent-card__sub">Sent one? Tell us if it got a reply — it helps us learn what works.</p>
+                <ul className="recent-list">
+                  {recent.map(r => {
+                    const tier = SIGNAL_TIERS[r.signal_tier] || SIGNAL_TIERS.general;
+                    const name = r.output?.prospect_name || "Prospect";
+                    const company = r.output?.prospect_company;
+                    return (
+                      <li key={r.id} className="recent-item">
+                        <div className="recent-item__main">
+                          <span className="recent-item__name">{name}</span>
+                          {company && <span className="recent-item__company"> · {company}</span>}
+                          <span className={`signal-tier ${tier.className} recent-item__tier`}>{tier.label}</span>
+                        </div>
+                        <div className="recent-item__side">
+                          <span className="recent-item__date">{timeAgo(r.created_at)}</span>
+                          {r.replied === true || r.replied === false ? (
+                            <span className="recent-item__recorded">
+                              <span className={`recent-item__outcome${r.replied ? " recent-item__outcome--yes" : ""}`}>
+                                {r.replied ? "Replied ✓" : "No reply"}
+                              </span>
+                              <button type="button" className="reply-undo" onClick={() => markReply(r.id, null)}>Undo</button>
+                            </span>
+                          ) : (
+                            <span className="recent-item__reply">
+                              <button type="button" className="reply-btn" title="Got a reply" onClick={() => markReply(r.id, true)}>👍</button>
+                              <button type="button" className="reply-btn" title="No reply" onClick={() => markReply(r.id, false)}>👎</button>
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </>

@@ -312,6 +312,21 @@ describe("POST handler — auth + credit gating", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it("returns 400 and does no AI work when a required field is blank", async () => {
+    const req = { json: async () => ({ pdfBase64: "dGVzdA==", senderName: "S", companyUrl: "https://x.com", productDescription: "  " }) };
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockConsumeCredit).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the PDF is missing", async () => {
+    const req = { json: async () => ({ senderName: "S", companyUrl: "https://x.com", productDescription: "p" }) };
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("consumes one credit after a successful generation", async () => {
     mockAnthropicSuccess();
     await POST(makeRequest());

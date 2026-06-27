@@ -46,6 +46,14 @@ describe("POST /api/generations/reply", () => {
     expect(mockSetReplied).toHaveBeenCalledWith({}, { id: "g1", userId: "u1", replied: true });
   });
 
+  it("accepts null to undo a recorded outcome", async () => {
+    mockGetUser.mockResolvedValue({ id: "u1" });
+    mockSetReplied.mockResolvedValue();
+    const r = await POST(req({ generation_id: "g1", replied: null }));
+    expect(await r.json()).toEqual({ ok: true });
+    expect(mockSetReplied).toHaveBeenCalledWith({}, { id: "g1", userId: "u1", replied: null });
+  });
+
   it("returns 500 when the write fails", async () => {
     mockGetUser.mockResolvedValue({ id: "u1" });
     mockSetReplied.mockRejectedValue(new Error("db down"));
