@@ -1,8 +1,25 @@
 import "./globals.css";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://outreach-studio-eight.vercel.app";
+const TITLE = "Cold Outreach Studio — cold emails built on a real reason to reach out";
+const DESCRIPTION = "Upload a LinkedIn PDF. We research the prospect, find a recent signal, and write the email — in about 30 seconds. You verify, you send. 3 free.";
+
 export const metadata = {
-  title: "Cold Outreach Studio",
-  description: "Turn cold profiles into high-signal outreach using our signature 6-part framework.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Cold Outreach Studio",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }) {
