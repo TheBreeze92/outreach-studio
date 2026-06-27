@@ -478,10 +478,13 @@ export default function App() {
                         </div>
                         <div className="recent-item__side">
                           <span className="recent-item__date">{timeAgo(r.created_at)}</span>
-                          {r.replied === true ? (
-                            <span className="recent-item__outcome recent-item__outcome--yes">Replied ✓</span>
-                          ) : r.replied === false ? (
-                            <span className="recent-item__outcome">No reply</span>
+                          {r.replied === true || r.replied === false ? (
+                            <span className="recent-item__recorded">
+                              <span className={`recent-item__outcome${r.replied ? " recent-item__outcome--yes" : ""}`}>
+                                {r.replied ? "Replied ✓" : "No reply"}
+                              </span>
+                              <button type="button" className="reply-undo" onClick={() => markReply(r.id, null)}>Undo</button>
+                            </span>
                           ) : (
                             <span className="recent-item__reply">
                               <button type="button" className="reply-btn" title="Got a reply" onClick={() => markReply(r.id, true)}>👍</button>

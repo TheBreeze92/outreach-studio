@@ -10,7 +10,8 @@ export async function POST(req) {
   }
 
   const { generation_id, replied } = await req.json();
-  if (!generation_id || typeof replied !== "boolean") {
+  // replied: true | false to record an outcome, null to undo/clear it.
+  if (!generation_id || (typeof replied !== "boolean" && replied !== null)) {
     return Response.json({ error: "Bad request." }, { status: 400 });
   }
 

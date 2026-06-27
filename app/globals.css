@@ -212,6 +212,21 @@ input, button { font-family: inherit; }
 .recent-item__date { font-size: 11.5px; color: var(--mute); }
 .recent-item__outcome { font-size: 11px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: 0.06em; }
 .recent-item__outcome--yes { color: #2e7d32; }
+.recent-item__recorded { display: flex; align-items: center; gap: 8px; }
+.reply-undo {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+.reply-undo:hover { color: var(--ink); }
 .recent-item__reply { display: flex; gap: 4px; }
 .reply-btn {
   background: transparent;
