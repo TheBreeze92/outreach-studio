@@ -2,6 +2,7 @@ import { reportError } from "../../../lib/reportError.js";
 import { getUser } from "../../../lib/supabaseServer.js";
 import { getAdminClient } from "../../../lib/supabaseAdmin.js";
 import { getBalance, consumeCredit } from "../../../lib/credits.js";
+import { logGeneration } from "../../../lib/generations.js";
 
 export const maxDuration = 60;
 
@@ -169,7 +170,11 @@ Run a maximum of 2 focused searches before concluding. Suggested search queries 
 1. "[Company name] news ${prev1Month} OR ${currentMonth} ${currentYear}"
 2. "[Prospect name] [Company] ${currentYear}"
 
-If you cannot find anything from the last 3 months, set signal_headline to "No recent signal found" and explain what you searched for in signal_detail. Still write the best possible email using the most recent signal you can find, or general knowledge of the company if nothing exists.
+SIGNAL TIERS — you must ALWAYS return a real reason to reach out. Never say there is none. Pick the strongest tier you can EVIDENCE (never invent):
+- "hot": a recent (last 2-3 months) buying signal from the list above.
+- "soft": no hot signal, but a real, evidenced angle from the prospect's own profile or public footprint — their stated expertise/focus, a real recent post or interview, or a role-specific priority. Use only what is actually evidenced.
+- "general": nothing specific found — genuine, relevant context about their company or industry.
+Set signal_tier accordingly. signal_headline must describe the actual angle you used (e.g. "Leading their team's push into X"), NEVER the words "no signal". Always write a complete, sendable email built on that real reason.
 
 SENDER CONTEXT:
 - Name: ${sender}
@@ -192,7 +197,8 @@ Return ONLY this JSON object, no markdown fences, no commentary:
   "prospect_name": "full name from PDF",
   "prospect_title": "their job title",
   "prospect_company": "their employer",
-  "signal_headline": "one-line headline summarising the signal",
+  "signal_tier": "hot | soft | general — the strongest tier you could evidence",
+  "signal_headline": "one-line headline describing the real angle (never 'no signal')",
   "signal_detail": "2-3 sentences describing the signal with enough detail the reader can verify it",
   "signal_source_url": "the actual URL of the article or page where you found this signal",
   "signal_source_name": "name of the publication or site (e.g. Campaign, Marketing Week, TechCrunch)",
@@ -208,8 +214,8 @@ Return ONLY this JSON object, no markdown fences, no commentary:
 }
 
 Rules:
-- signal_source_url must be a real URL you actually found during web search, not a guess
-- If you cannot find a recent signal, set signal_headline to "No recent signal found" and explain what you searched in signal_detail — do NOT use signals from ${currentYear - 1} or earlier
+- signal_source_url must be a real URL you actually found during web search, not a guess (leave "" for soft/general tiers with no article)
+- Never invent a signal. If there is no recent (last 3 months) buying signal, drop to the "soft" or "general" tier — do NOT use signals from ${currentYear - 1} or earlier, and never claim a signal that isn't evidenced
 - Every email field must be populated
 - Return ONLY valid JSON`;
 
@@ -239,7 +245,23 @@ Rules:
       // Never withhold a generated email over a ledger hiccup; just log it.
       reportError("consume-credit", creditErr).catch(() => {});
     }
-    return Response.json(parsed);
+
+    // Log the generation for the data flywheel. Non-fatal: a logging failure
+    // must never withhold the user's email.
+    let generationId = null;
+    try {
+      generationId = await logGeneration(admin, {
+        userId: user.id,
+        inputs: { senderName: sender, companyUrl: url, productDescription: product },
+        signalTier: parsed.signal_tier,
+        signalHeadline: parsed.signal_headline,
+        output: parsed,
+      });
+    } catch (logErr) {
+      reportError("log-generation", logErr).catch(() => {});
+    }
+
+    return Response.json({ ...parsed, generation_id: generationId });
 
   } catch (e) {
     await reportError("research", e);
