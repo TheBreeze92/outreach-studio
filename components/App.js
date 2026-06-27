@@ -49,6 +49,12 @@ function GoogleMark() {
   );
 }
 
+const SIGNAL_TIERS = {
+  hot:     { label: "Hot signal", className: "signal-tier--hot" },
+  soft:    { label: "Angle",      className: "signal-tier--soft" },
+  general: { label: "Relevance",  className: "signal-tier--general" },
+};
+
 const EMAIL_PARTS = [
   ["hook",        "01 · The Hook"],
   ["signal_line", "02 · The Signal — Why Now"],
@@ -464,13 +470,17 @@ export default function App() {
               <div className="signal-card__header">
                 <span className="signal-card__dot" />
                 <span className="signal-card__eyebrow">The Signal — Why Now</span>
+                {(() => {
+                  const tier = SIGNAL_TIERS[result.signal_tier] || SIGNAL_TIERS.general;
+                  return <span className={`signal-tier ${tier.className}`}>{tier.label}</span>;
+                })()}
                 {result.signal_date && (
                   <span className="signal-card__date">{result.signal_date}</span>
                 )}
               </div>
               <p className="signal-card__headline">{result.signal_headline}</p>
               <p className="signal-card__detail">{result.signal_detail}</p>
-              {result.signal_source_url && result.signal_headline !== "No signal found in the last 2 months" && (
+              {result.signal_source_url && (
                 <a href={result.signal_source_url} target="_blank" rel="noreferrer" className="signal-card__link">
                   <ExternalLink size={13} />
                   Verify source · {result.signal_source_name || "View article"}
@@ -534,7 +544,7 @@ export default function App() {
           </div>
         )}
 
-        <footer className="app-footer">Cold Outreach Studio · no data stored</footer>
+        <footer className="app-footer">Cold Outreach Studio · we save your generated emails, never the uploaded PDF</footer>
       </div>
     </div>
   );
