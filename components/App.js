@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Send, ChevronDown } from "lucide-react";
+import { Upload, RotateCcw, Sparkles, FileText, Search, Mail, ExternalLink, Send, ChevronDown, LogOut } from "lucide-react";
 import { buildGmailUrl } from "../lib/buildMailtoUrl.js";
 import { getBrowserClient } from "../lib/supabaseBrowser.js";
 import Landing from "./Landing.js";
@@ -187,6 +187,18 @@ export default function App() {
     }
   }
 
+  async function signOut() {
+    if (!window.confirm("Sign out of Cold Outreach Studio?")) return;
+    await sb().auth.signOut();
+    // onAuthStateChange will fire with a null session, but reset eagerly so the
+    // signed-in UI clears immediately.
+    setSession(null);
+    setBalance(null);
+    setRecent([]);
+    setResult(null);
+    setShowPaywall(false);
+  }
+
   async function signInWithGoogle() {
     setSubError("");
     const base = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
@@ -282,7 +294,13 @@ export default function App() {
         {/* HEADER (signed-in tool only — Landing has its own hero) */}
         {session && (
           <header className="app-header">
-            <span className="app-header__eyebrow">Cold Outreach Studio · v3</span>
+            <div className="app-header__top">
+              <span className="app-header__eyebrow">Cold Outreach Studio · v3</span>
+              <button type="button" className="app-header__signout" onClick={signOut}>
+                <LogOut size={13} color={mute} />
+                Sign out
+              </button>
+            </div>
             <h1 className="app-header__h1">
               Cold Outreach<br />
               <span className="app-header__h1-italic">Studio</span>
@@ -374,15 +392,15 @@ export default function App() {
                   <span className="details-card__heading">Your details — all required, they tailor the email</span>
                   <div className="details-field">
                     <label className="form-label">Your name <span className="req">*</span></label>
-                    <input className="form-input" placeholder="e.g. Alex Johnson" value={senderName} onChange={e => setSenderName(e.target.value)} required />
+                    <input className="form-input" placeholder="e.g. Top Dog" value={senderName} onChange={e => setSenderName(e.target.value)} required />
                   </div>
                   <div className="details-field">
                     <label className="form-label">Company URL <span className="req">*</span></label>
-                    <input className="form-input" placeholder="e.g. https://acmecorp.com" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} required />
+                    <input className="form-input" placeholder="e.g. dogeatdogstudio.com" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} required />
                   </div>
                   <div className="details-field">
                     <label className="form-label">What does your product do? <span className="req">*</span></label>
-                    <input className="form-input" placeholder="e.g. We help B2B sales teams book more meetings by turning prospect research into personalised emails in seconds" value={productDescription} onChange={e => setProductDescription(e.target.value)} required />
+                    <input className="form-input" placeholder="e.g. We're Dog Eat Dog Studio — we turn prospect research into personalised cold emails that actually get replies" value={productDescription} onChange={e => setProductDescription(e.target.value)} required />
                   </div>
                 </div>
 
